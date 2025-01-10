@@ -2,13 +2,22 @@ from typing import List
  
 from fastapi import APIRouter, Depends,HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 import api.cruds.task as task_crud
 from api.db import get_db
  
 import api.schemas.task as task_schema
+import api.models.task as task_model
+
  
+from datetime import date
+from datetime import datetime
+
 router = APIRouter()
+
+def get_today_date():
+    return datetime.today().date()
  
 @router.get("/tasks", response_model=List[task_schema.Task])
 async def list_tasks(db: AsyncSession = Depends(get_db)):
@@ -37,3 +46,11 @@ async def delete_task(task_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Task not found")
 
     return await task_crud.delete_task(db, original=task)
+
+@router.post("/calc_pow{task_id}")
+async def square(x: int):
+    return  x ** 2
+
+@router.get("/due_date_tasks",response_model=List[task_schema.Task])
+async def todays_due_date_list(db: AsyncSession = Depends(get_db)):
+    return await task_crud.get_due_date_tasks(db)

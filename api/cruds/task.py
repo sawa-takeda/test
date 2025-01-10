@@ -7,15 +7,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import api.models.task as task_model
 import api.schemas.task as task_schema
 
+from datetime import date,datetime
+
+def get_today_date():
+    return datetime.today().date()
+ 
 
 async def create_task(
     db: AsyncSession, task_create: task_schema.TaskCreate
 ) -> task_model.Task:
-    task = task_model.Task(**task_create.dict())
+    task = task_model.Task(
+        title=task_create.title,
+        due_date=task_create.due_date  # 締切日を設定
+    )
     db.add(task)
     await db.commit()
     await db.refresh(task)
     return task
+
 
 async def get_tasks_with_done(db: AsyncSession) -> List[Tuple[int, str, bool]]:
     result: Result = await (
@@ -24,11 +33,23 @@ async def get_tasks_with_done(db: AsyncSession) -> List[Tuple[int, str, bool]]:
                 task_model.Task.id,
                 task_model.Task.title,
                 task_model.Done.id.isnot(None).label("done"),
+                task_model.Task.due_date,
             ).outerjoin(task_model.Done)
         )
     )
     return result.all()
 
+async def get_due_date_tasks(db: AsyncSession) -> List[Tuple[int, str, bool]]:
+    today = get_today_date()
+    result: Result = await (
+        db.execute(
+            select(
+                task_model.Task.id,
+                task_model.Task.title,
+                task_model.Done.id.isnot(None).label("done"),
+                task_model.Task.due_date
+            ).outerjoin(task_model.Done).filter(task_model.Task.due_date == today,task_model.Done.id.isnot(None).label("done") == False)))
+    return result.all()
 
 async def get_task(db: AsyncSession, task_id: int) -> Optional[task_model.Task]:
     result: Result = await db.execute(
@@ -42,6 +63,7 @@ async def update_task(
     db: AsyncSession, task_create: task_schema.TaskCreate, original: task_model.Task
 ) -> task_model.Task:
     original.title = task_create.title
+    original.due_date = task_create.due_date
     db.add(original)
     await db.commit()
     await db.refresh(original)
