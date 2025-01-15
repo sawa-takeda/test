@@ -1,12 +1,12 @@
 from typing import List
- 
+
 from fastapi import APIRouter, Depends,HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 import api.cruds.task as task_crud
 from api.db import get_db
- 
+
 import api.schemas.task as task_schema
 import api.models.task as task_model
 
